@@ -29,7 +29,6 @@ class AppHandler(object):
 		self.f.write(data)
 		self.f.flush()
 
-
 class Main(object):
 	def __init__(self):
 		self.directory = 'received'
@@ -41,10 +40,6 @@ class Main(object):
 	def parse_options(self):
 		parser = optparse.OptionParser(usage="%prog [options]",
 									   version="%prog 0.1")
-
-		parser.add_option("-f", "--filename", type="str", dest="filename",
-						  default='test.txt',
-						  help="filename to send")
 
 		parser.add_option("-l", "--loss", type="float", dest="loss",
 						  default=0.0,
@@ -59,7 +54,7 @@ class Main(object):
 						  default=False, help="Turns on fast retransmit")
 
 		(options, args) = parser.parse_args()
-		self.fast_retransmit = options.fast_retransmit
+		self.fast_retransmit = "internet-architecture.pdf"
 		self.filename = options.filename
 		self.loss = options.loss
 		self.window = options.window
@@ -80,10 +75,9 @@ class Main(object):
 		Sim.scheduler.reset()
 		Sim.set_debug('AppHandler')
 		Sim.set_debug('TCP')
-		Sim.set_debug('Plot')
 
 		# setup network
-		net = Network('basic1.txt')
+		net = Network('basic.txt')
 		net.loss(self.loss)
 
 		# setup routes
@@ -100,8 +94,8 @@ class Main(object):
 		a = AppHandler(self.filename)
 
 		# setup connection
-		c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=self.window)
-		TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=self.window)
+		c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=self.window, fast_retransmit=self.fast_retransmit)
+		TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=self.window, fast_retransmit=self.fast_retransmit)
 
 		# send a file
 		with open(self.filename, 'rb') as f:

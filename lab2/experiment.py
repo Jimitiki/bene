@@ -35,50 +35,28 @@ class Main(object):
 		self.directory = 'received'
 		self.parse_options()
 		self.run()
-		self.diff()
 		self.filename = None
 
 	def parse_options(self):
 		parser = optparse.OptionParser(usage="%prog [options]",
 									   version="%prog 0.1")
 
-		parser.add_option("-f", "--filename", type="str", dest="filename",
-						  default='test.txt',
-						  help="filename to send")
-
-		parser.add_option("-l", "--loss", type="float", dest="loss",
-						  default=0.0,
-						  help="random loss rate")
-
 		parser.add_option("-w", "--window", type="int", dest="window",
 							default=1000,
 							help="TCP connection window size")
 
 		(options, args) = parser.parse_args()
-		self.filename = options.filename
-		self.loss = options.loss
+		self.fast_retransmit = True
+		self.filename = "internet-architecture.pdf"
+		self.loss = 0.0
 		self.window = options.window
-
-	def diff(self):
-		args = ['diff', '-u', self.filename, os.path.join(self.directory, self.filename)]
-		result = subprocess.Popen(args, stdout=subprocess.PIPE).communicate()[0]
-		print()
-		if not result:
-			print("File transfer correct!")
-		else:
-			print("File transfer failed. Here is the diff:")
-			print(result)
-			quit()
 
 	def run(self):
 		# parameters
 		Sim.scheduler.reset()
-		Sim.set_debug('AppHandler')
-		Sim.set_debug('TCP')
-		Sim.set_debug('Plot')
 
 		# setup network
-		net = Network('basic.txt')
+		net = Network('experiment.txt')
 		net.loss(self.loss)
 
 		# setup routes
@@ -95,8 +73,8 @@ class Main(object):
 		a = AppHandler(self.filename)
 
 		# setup connection
-		c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=self.window)
-		TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=self.window)
+		c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=self.window, fast_retransmit=self.fast_retransmit, measure=True)
+		TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=self.window, fast_retransmit=self.fast_retransmit, measure=True)
 
 		# send a file
 		with open(self.filename, 'rb') as f:
@@ -107,7 +85,11 @@ class Main(object):
 				Sim.scheduler.add(delay=0, event=data, handler=c1.send)
 
 		Sim.scheduler.run()
-
+		result_file = open("results.txt", "r")
+		results = result_file.read()
+		result_file.close()
+		f = open("experiment.csv", "a")
+		f.write(str(self.window) + "," + results + "\n")
 
 if __name__ == '__main__':
 	m = Main()

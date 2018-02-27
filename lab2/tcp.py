@@ -1,14 +1,16 @@
+from __future__ import print_function
 from src.buffer import SendBuffer, ReceiveBuffer
 from src.connection import Connection
 from src.sim import Sim
 from src.tcppacket import TCPPacket
-
+import traceback
 
 class TCP(Connection):
 	""" A TCP connection between two hosts."""
 
 	def __init__(self, transport, source_address, source_port,
-				 destination_address, destination_port, app=None, window=1000,drop=[]):
+				 destination_address, destination_port, app=None, window=1000,drop=[],
+				 fast_retransmit=False, measure=False):
 		Connection.__init__(self, transport, source_address, source_port,
 							destination_address, destination_port, app)
 
@@ -41,6 +43,13 @@ class TCP(Connection):
 		# ack number to send; represents the largest in-order sequence
 		# number not yet received
 		self.ack = 0
+		self.fast_retransmit = fast_retransmit
+		self.last_ack = 0
+		self.last_ack_count = 0
+		self.measure = measure
+		self.total_queue_delay = 0
+		self.packet_count = 0
+		self.byte_count = 0
 
 	def trace(self, message):
 		""" Print debugging messages. """
@@ -107,7 +116,17 @@ class TCP(Connection):
 		self.send_buffer.slide(packet.ack_number)
 		self.trace("%s (%d) received ACK from %d for %d" % (
 			self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number))
-		
+
+		if self.fast_retransmit:
+			if self.last_ack == packet.ack_number:
+				self.last_ack_count += 1
+				if self.last_ack_count == 4:
+					self.cancel_timer()
+					self.retransmit(None)
+			elif packet.ack_number > self.last_ack:
+				self.last_ack = packet.ack_number
+				self.last_ack_count = 1
+
 		self.cancel_timer()
 		if not self.send_buffer.outstanding() == 0:
 			self.start_retransmit_timer(self.timeout)
@@ -115,9 +134,14 @@ class TCP(Connection):
 
 	def retransmit(self, event):
 		""" Retransmit data. """
-		self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
+		if event:
+			self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
+		else:
+			self.trace("%s (%d) Fast retransmit occured" % (self.node.hostname, self.source_address))
 		self.timer = None
 		(data, sequence) = self.send_buffer.resend(self.mss)
+		if len(data) == 0:
+			return
 		self.send_packet(data, sequence)
 
 	def start_retransmit_timer(self, time):
@@ -144,7 +168,14 @@ class TCP(Connection):
 		self.app.receive_data(buffer_data)
 		if sequence_number == packet.sequence:
 			self.ack = packet.sequence + len(buffer_data)
-
+		if self.measure:
+			self.total_queue_delay += packet.queueing_delay
+			self.packet_count += 1
+			self.byte_count += packet.length
+			f = open(name="results.txt", mode="w")
+			f.write(str(self.total_queue_delay / self.packet_count) + "," + str(self.byte_count / Sim.scheduler.current_time()))
+			f.close()
+			
 		self.send_ack()
 
 	def send_ack(self):
