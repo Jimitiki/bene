@@ -54,8 +54,8 @@ class Main(object):
 						  default=False, help="Turns on fast retransmit")
 
 		(options, args) = parser.parse_args()
-		self.fast_retransmit = "internet-architecture.pdf"
-		self.filename = options.filename
+		self.fast_retransmit = options.fast_retransmit
+		self.filename = "internet-architecture.pdf"
 		self.loss = options.loss
 		self.window = options.window
 

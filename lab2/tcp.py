@@ -121,7 +121,6 @@ class TCP(Connection):
 			if self.last_ack == packet.ack_number:
 				self.last_ack_count += 1
 				if self.last_ack_count == 4:
-					self.cancel_timer()
 					self.retransmit(None)
 			elif packet.ack_number > self.last_ack:
 				self.last_ack = packet.ack_number
@@ -136,9 +135,9 @@ class TCP(Connection):
 		""" Retransmit data. """
 		if event:
 			self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
+			self.timer = None
 		else:
 			self.trace("%s (%d) Fast retransmit occured" % (self.node.hostname, self.source_address))
-		self.timer = None
 		(data, sequence) = self.send_buffer.resend(self.mss)
 		if len(data) == 0:
 			return
@@ -165,7 +164,9 @@ class TCP(Connection):
 
 		self.receive_buffer.put(packet.body, packet.sequence)
 		(buffer_data, sequence_number) = self.receive_buffer.get()
-		self.app.receive_data(buffer_data)
+		if len(buffer_data) > 0:
+			self.app.receive_data(buffer_data)
+		
 		if sequence_number == packet.sequence:
 			self.ack = packet.sequence + len(buffer_data)
 		if self.measure:
