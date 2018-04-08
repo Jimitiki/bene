@@ -15,6 +15,7 @@ class Plotter:
 
     def cwnd(self,filename):
         plt.figure()
+# plt.tight_layout()
         df = pd.read_csv('cwnd.csv',dtype={'Time':float,'Congestion Window':float})
         ax = df.plot(x="Time",y="Congestion Window")
         # set the axes
@@ -117,6 +118,7 @@ class Plotter:
 
     def sequence(self,filename):
         plt.figure()
+# plt.tight_layout()
         df = pd.read_csv('sequence.csv',dtype={'Time':float,'Sequence Number':int})
         df['Sequence Number']  =  df['Sequence Number'] / 1000 % 50
         # send

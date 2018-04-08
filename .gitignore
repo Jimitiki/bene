@@ -2,3 +2,5 @@
 *.pyc
 .idea
 examples/received
+.vscode/.ropeproject/config.py
+.vscode/.ropeproject/objectdb

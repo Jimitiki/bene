@@ -146,6 +146,7 @@ class TCP(Connection):
 		if bytes_acked > 0:
 			if self.slow_start:
 				self.cwnd += self.mss
+				self.plot_cwnd()
 				if self.cwnd == self.ss_thresh:
 					self.slow_start = False
 					self.trace("Entering Additive Increase: CWND = %s" % (self.cwnd))
@@ -154,9 +155,9 @@ class TCP(Connection):
 				if self.cwnd_inc > self.mss:
 					self.cwnd += self.mss
 					self.cwnd_inc -= self.mss
+					self.plot_cwnd()
 
 
-		self.plot_cwnd()
 
 		# self.trace("Window Size: %f" % (self.cwnd))
 		self.cancel_timer()
